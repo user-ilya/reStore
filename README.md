@@ -1,70 +1,159 @@
-# Getting Started with Create React App
+// Redux компоненты 
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Для того, чтобы создать Redux приложение нужно определить функцию-reducer.
+Функции action-creators не обязательно использовать, но на практике они присутствуют всегда.
+Логику создания store удобно вынести в отдельный файл.
+=====================================================================
+// Чтение данных из Redux store
 
-## Available Scripts
+const Person = ({name}) => {
+    return (<p>{name}</p>)
+}
 
-In the project directory, you can run:
+const mapStateToProps = (state) => {
+    return {
+        name: state.firstName
+    }
+}
 
-### `npm start`
+export default connect(mapStateToProps)(Person)
+=====================================================================
+// Отправка действий в Redux Store
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+const compose = (...func) => (comp) => {
+    return func.reduceRight(
+        (wrapped, f) => f(wrapped), comp
+    )
+}
+export default compose;
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+const mapDispatchToProps = (dispatch) => {
+    return bindActionCreators({booksLoaded}, dispatch)
+}
+export default compose(withBookstoreService(),
+connect(mapStateToProps, mapDispatchToProps))
+(BookList)
 
-### `npm test`
+Чтобы получить данные из сервисаи передать их в Redux Store мы использовали два компонента высшего порядка (HOC)
+- Первый HOC - это withBookstoreService, получает сервис из контекста и передает в компонент.
+- Второй HOC - connect() оборачивает функцию dispatch из Redux Store.
+-mapDispatchToProps может быть функцией или объектом. Если это объект, то он передается в bindActionCreators().
+=====================================================================
+// Асинхронные данные 
+Реализация загрузки данных в Redux можно так-же, как и в обычном React приложении.
+- Добавить поле loading в Redux Store;
+- Обновлять это поле в reducer, когда данные становятся доступными;
+- Передать значение loading в компонент, используя mapStateToProps.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+=====================================================================
+// Различия между setState и reducer
+- В SetState() можно передавать только ту часть state, которую требуется обновить
+- Reducer должен вернуть полный объект state
+    return {
+        ...state,
+        updateProps: newValue
+    };
+=====================================================================
+// Обработка ошибок
+- Ошибку получения данных, нужно сохранить в store. Затем компонент сможет её отобразить. 
+- Чтобы сохранить ошибку, нужно создать действие (Book_Error).
+- Саму ошибку можно передать вместе с действием и сохранить в store 
+ case 'Book_Error': 
+            return {
+                value: [],
+                loading: false,
+                error: action.payload
+            }
+=====================================================================
+Аргумент ownProps 
+ - У mapDispatchToProps есть второй аргумент 
+ <Person details = 'full' />
 
-### `npm run build`
+ mapDispatchToProps = (dispatch, ownProps) => {
+     console.log(ownProps.details) // full
+ }
+ export default connect(mapDispatchToProps, mapStateToProps)(Persone)
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+=====================================================================
+Правила выбора имен для действий 
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+[тип запроса]_[объект]_[дейсвие]
+FETCH_BOOKS_REQUEST - запрос отправлен
+FETCH_BOOKS_SUCCESS - получен результат 
+FETCH_BOOKS_FAILURE - произошла ошибка 
+=====================================================================
+// Компоненты-контейнеры
+- Презентационные компоненты - отвечаю только за рендеринг. Они ничего не знают откуда приходят данные.
+- Компоненты-контейнеры - работают с Redux, реализуют loading, error, и другую логику.
+- Компоненты-контейнеры иногда выносят в отдельные файлы (PersonContainer) или папку (/container).
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+=====================================================================
+// Добавление в массив Redux
+В redux приложениях, так же как и в React нельзя модифицировать state
+Добавить элемент в массив можно так: 
+case 'ADD_TO_ITEM': 
+    const item = action.payload
+    return {
+        items: [...state.items, item]
+    }
+=====================================================================
+// Обновление элементов массива Redux
+Обновить элемент можно так: 
+case 'UPDATE_IN_ARRAY': 
+    const {index, updateItem} = action.payload,
+    return {
+        items: [
+        ...state.items.slice(0, index),
+        updateItem,
+        ...state.items.slice(index+1)
+        ]
+    }
+=====================================================================
+// Удаление элементов из массива Redux
+Elfkbnm элемент можно так: 
+case 'UPDATE_IN_ARRAY': 
+    const {index, updateItem} = action.payload,
+    return {
+        items: [
+        ...state.items.slice(0, index),
+        updateItem,
+        ...state.items.slice(index+1)
+        ]
+    }
+=====================================================================
+// Store Enhancer
+Store Enhancer управляет процессом создания store/ Возвращает новую реализацию createStore.
+const logAll = (createStore) => (...args) => {
+    const store = createStore(...args)
+    const {dispatch} = store
+    
+    store.dispatch = (action) => { // подменяем dispatch
+        console.log(action.type)
+        dispatch(action) // вызываем оригинальный dispatch
+    }
+    
+    return store
+}
+const store = createStore(reducer, logAll)
+=====================================================================
+// Middleware
+Middleware Функции, которые последовательно вызываются при обработке действий.
+import {applyMiddleware} from 'redux';
+const logAll = ({getState, dispatch}) => (dispatch) => (action) => {
+    console.log(action.type, getState)
+    return dispatch(action)
+}
+const store = createStore(reducer, applyMiddleware)
 
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Middleware используются намного чаще, чем Store Enhancer.
+=====================================================================
+Thunk Middleware
+Thunk Middleware позволяет передавать в store, как действия.
+Такие функции принимают dispatch() и getState()
+const getPerson = (id) = (dispatch) => {
+    dispatch({type: 'FETCH_PERSON_REQUEST'});
+    fetchPerson(id)
+        .then((data) => dispatch({type: 'FETCH_PERSON_SUCCESS'}, data))
+        .catch(error => dispatch({type: 'FETCH_PERSON_FAILURE'}, error))
+}
+store.dispatch(getPerson(1))
