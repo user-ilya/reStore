@@ -123,6 +123,7 @@ case 'UPDATE_IN_ARRAY':
 =====================================================================
 // Store Enhancer
 Store Enhancer управляет процессом создания store/ Возвращает новую реализацию createStore.
+
 const logAll = (createStore) => (...args) => {
     const store = createStore(...args)
     const {dispatch} = store
@@ -138,6 +139,7 @@ const store = createStore(reducer, logAll)
 =====================================================================
 // Middleware
 Middleware Функции, которые последовательно вызываются при обработке действий.
+
 import {applyMiddleware} from 'redux';
 const logAll = ({getState, dispatch}) => (dispatch) => (action) => {
     console.log(action.type, getState)
@@ -150,6 +152,7 @@ Middleware используются намного чаще, чем Store Enhanc
 Thunk Middleware
 Thunk Middleware позволяет передавать в store, как действия.
 Такие функции принимают dispatch() и getState()
+
 const getPerson = (id) = (dispatch) => {
     dispatch({type: 'FETCH_PERSON_REQUEST'});
     fetchPerson(id)
